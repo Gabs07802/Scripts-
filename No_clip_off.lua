@@ -1,1 +1,1 @@
-if _G.noclip_cleanup then _G.noclip_cleanup() end
+if _G.freecam_cleanup then _G.freecam_cleanup() end
