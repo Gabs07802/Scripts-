@@ -1,4 +1,4 @@
---[[ FREECAM + TP FiveM Style (corrigido: personagem imóvel e mouse look real) ]]
+--[[ FREECAM + TP estilo FiveM (olhar livre com mouse ou touch, personagem imóvel, botão TP) ]]
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -11,12 +11,12 @@ local hrp = char:WaitForChild("HumanoidRootPart")
 local hum = char:FindFirstChildOfClass("Humanoid")
 local camera = Workspace.CurrentCamera
 
--- Evita múltiplas execuções antigas
 if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) end
 if _G.freecamStep then pcall(function() _G.freecamStep:Disconnect() end) end
+if _G.freecamTouch then pcall(function() _G.freecamTouch:Disconnect() end) end
 _G.freecaming = true
 
--- Salva valores originais do personagem para restaurar depois
+-- Salva valores originais para restaurar depois
 local oldWalkSpeed = hum.WalkSpeed
 local oldJumpPower = hum.JumpPower
 hum.WalkSpeed = 0
@@ -38,7 +38,7 @@ txt.TextColor3 = Color3.fromRGB(180,85,85)
 txt.TextStrokeTransparency = 0.6
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 22
-txt.Text = "FREECAM: WASD/mouse ou analógico | TP = teleporte"
+txt.Text = "FREECAM: WASD/mouse ou analógico/touch | TP = teleporte"
 
 local tpBtn = Instance.new("TextButton", gui)
 tpBtn.Size = UDim2.new(0,120,0,44)
@@ -96,21 +96,26 @@ if isMobile then
     mobileBtns.down.MouseButton1Up:Connect(function() down=false end)
 end
 
-local freecamCF = camera.CFrame
-local pitch, yaw = 0, 0
-
--- Inicializa yaw/pitch da câmera atual
-do
-    local look = freecamCF.LookVector
-    yaw = math.atan2(-look.X, -look.Z)
-    pitch = math.asin(look.Y)
+-- Inicializa rotação freecam
+local freecamPos = camera.CFrame.Position
+local function getYawPitch(cf)
+    local look = cf.LookVector
+    local yaw = math.atan2(-look.X, -look.Z)
+    local pitch = math.asin(look.Y)
+    return yaw, pitch
 end
+local yaw, pitch = getYawPitch(camera.CFrame)
+
+-- Mobile drag vars
+local dragging = false
+local lastTouchPos = nil
+local touchSensitivity = 0.018 -- Ajuste para sensibilidade do drag
 
 -- Deixa personagem imóvel (além do WalkSpeed=0)
 hrp.Anchored = true
 if hum then hum.PlatformStand = true end
 
--- INPUT PC para velocidade e subir/descer câmera
+-- INPUT PC para velocidade, subir/descer câmera, mouse look
 _G.freecamConn = UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Z then
@@ -131,6 +136,28 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
+-- TOUCH para olhar (mobile)
+if isMobile then
+    _G.freecamTouch = UIS.TouchStarted:Connect(function(input, gpe)
+        if input.UserInputType == Enum.UserInputType.Touch and input.Position.X > Workspace.CurrentCamera.ViewportSize.X*0.2 then
+            dragging = true
+            lastTouchPos = input.Position
+        end
+    end)
+    UIS.TouchMoved:Connect(function(input, gpe)
+        if dragging and input.UserInputType == Enum.UserInputType.Touch and lastTouchPos then
+            local delta = input.Position - lastTouchPos
+            yaw = yaw - delta.X * touchSensitivity
+            pitch = math.clamp(pitch - delta.Y * touchSensitivity, -math.rad(89), math.rad(89))
+            lastTouchPos = input.Position
+        end
+    end)
+    UIS.TouchEnded:Connect(function(input, gpe)
+        dragging = false
+        lastTouchPos = nil
+    end)
+end
+
 _G.freecamStep = Run.RenderStepped:Connect(function(dt)
     if not _G.freecaming then return end
 
@@ -149,7 +176,7 @@ _G.freecamStep = Run.RenderStepped:Connect(function(dt)
 
     -- Calcula CFrame da câmera com pitch/yaw livre
     local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
-    freecamCF = CFrame.new(freecamCF.Position) * rot
+    local freecamCF = CFrame.new(freecamPos) * rot
 
     moveDir = Vector3.new()
     -- PC: WASD movimenta câmera
@@ -159,17 +186,18 @@ _G.freecamStep = Run.RenderStepped:Connect(function(dt)
     if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - freecamCF.RightVector end
     if up then moveDir = moveDir + Vector3.new(0,1,0) end
     if down then moveDir = moveDir - Vector3.new(0,1,0) end
-    -- Mobile: usa MoveDirection do humanoid
+    -- Mobile: usa MoveDirection do humanoid (analógico)
     if isMobile and hum.MoveDirection.Magnitude > 0 then
-        moveDir = moveDir + hum.MoveDirection
+        moveDir = moveDir + freecamCF.Rotation:VectorToWorldSpace(hum.MoveDirection)
     end
 
     if moveDir.Magnitude > 0 then
-        freecamCF = freecamCF + (moveDir.Unit * freecamSpeed * dt)
+        freecamPos = freecamPos + (moveDir.Unit * freecamSpeed * dt)
+        freecamCF = CFrame.new(freecamPos) * rot
     end
 
     camera.CFrame = freecamCF
-    lastCamPos = camera.CFrame.Position
+    lastCamPos = freecamCF.Position
 end)
 
 tpBtn.MouseButton1Click:Connect(function()
@@ -184,6 +212,7 @@ _G.freecam_cleanup = function()
     _G.freecaming = false
     if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) _G.freecamConn = nil end
     if _G.freecamStep then pcall(function() _G.freecamStep:Disconnect() end) _G.freecamStep = nil end
+    if _G.freecamTouch then pcall(function() _G.freecamTouch:Disconnect() end) _G.freecamTouch = nil end
     pcall(function() gui:Destroy() end)
     camera.CameraSubject = hum or hrp
     camera.CameraType = Enum.CameraType.Custom
