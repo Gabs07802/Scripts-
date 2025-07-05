@@ -1,11 +1,4 @@
---[[
-    FLY UNIVERSAL v3 (PC & MOBILE) - LIGAR
-    - Teclas Z/X (PC) ou botões (+/-) (Mobile) para controlar velocidade do voo
-    - Espaço (PC) ou botão "↑" (Mobile) para subir, Shift (PC) ou botão "↓" (Mobile) para descer
-    - Não gira o personagem bruscamente, mantém postura natural
-    - Interface de controle só aparece em dispositivos mobile
-    - GUI mostra velocidade atual
---]]
+--[[ FLY UNIVERSAL (PC e MOBILE) - Anda para frente do personagem ]]
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -25,7 +18,6 @@ local moveDir = Vector3.new()
 local flyUp, flyDown = false, false
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
--- GUI global cleanup (old)
 pcall(function() if plr.PlayerGui:FindFirstChild("FLYGUI") then plr.PlayerGui.FLYGUI:Destroy() end end)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "FLYGUI"
@@ -43,7 +35,6 @@ txt.Font = Enum.Font.GothamBold
 txt.TextSize = 22
 txt.Text = "FLY: "..tostring(flySpeed).." | Z/X = Velocidade"
 
--- MOBILE BUTTONS
 local mobileBtns = {}
 if isMobile then
     local function makeBtn(txtLabel, pos, size)
@@ -62,15 +53,10 @@ if isMobile then
         c.CornerRadius = UDim.new(1,0)
         return b
     end
-    -- + Velocidade (direita)
     mobileBtns.plus = makeBtn("+", UDim2.new(1,-70,1,-170), 56)
-    -- - Velocidade (esquerda)
     mobileBtns.minus = makeBtn("-", UDim2.new(1,-140,1,-170), 56)
-    -- ↑ Subir (acima)
     mobileBtns.up = makeBtn("↑", UDim2.new(1,-105,1,-235), 44)
-    -- ↓ Descer (abaixo)
     mobileBtns.down = makeBtn("↓", UDim2.new(1,-105,1,-110), 44)
-    -- Botão de fechar fly
     mobileBtns.close = makeBtn("✖", UDim2.new(1,-50,1,-50), 36)
 
     mobileBtns.plus.MouseButton1Click:Connect(function()
@@ -97,14 +83,13 @@ end
 -- ANIMAÇÃO NATURAL
 if hum and hum:FindFirstChildOfClass("Animator") then
     local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://913402848" -- Animation deitado (ou pose de nado)
+    anim.AnimationId = "rbxassetid://913402848"
     local track = hum:FindFirstChildOfClass("Animator"):LoadAnimation(anim)
     track:Play()
     track.Looped = true
     _G.flyAnimTrack = track
 end
 
--- INPUT (PC)
 _G.flyConn = UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Z then
@@ -127,23 +112,21 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- FLY LOOP
 _G.flyStep = Run.RenderStepped:Connect(function()
     if not _G.flying or not char or not hrp or not hum then return end
 
-    local cam = workspace.CurrentCamera
+    local charCF = hrp.CFrame
     moveDir = Vector3.new()
-    -- PC
-    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + charCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - charCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + charCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - charCF.RightVector end
     if flyUp then moveDir = moveDir + Vector3.new(0,1,0) end
     if flyDown then moveDir = moveDir - Vector3.new(0,1,0) end
 
-    -- MOBILE: usa MoveDirection do humanoid
+    -- MOBILE: MoveDirection já é no espaço do personagem!
     if isMobile and hum.MoveDirection.Magnitude > 0 then
-        moveDir = moveDir + (cam.CFrame.Rotation:VectorToWorldSpace(hum.MoveDirection))
+        moveDir = moveDir + hum.MoveDirection
     end
 
     if moveDir.Magnitude > 0 then
@@ -152,12 +135,10 @@ _G.flyStep = Run.RenderStepped:Connect(function()
         hrp.Velocity = Vector3.new(0,0,0)
     end
 
-    -- Bloqueia gravidade e mantém pose
-    hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+    hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + charCF.LookVector)
     hum.PlatformStand = true
 end)
 
--- Limpeza ao morrer/desativar
 char.AncestryChanged:Connect(function()
     if not char:IsDescendantOf(workspace) then
         _G.flying = false
