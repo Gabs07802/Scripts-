@@ -1,4 +1,4 @@
--- Aimlock: faz o corpo (HumanoidRootPart) apontar para o inimigo mais próximo
+-- Aimlock: corpo gira para o inimigo mais próximo e a câmera também mira (CFrame)
 _G.AimLockEnabled = true
 
 local Players = game:GetService("Players")
@@ -11,12 +11,7 @@ local function getClosestPlayer()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
             local headPos = plr.Character.Head.Position
-            local myPos
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                myPos = player.Character.HumanoidRootPart.Position
-            else
-                myPos = camera.CFrame.Position
-            end
+            local myPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or camera.CFrame.Position
             local mag = (myPos - headPos).Magnitude
             if mag < dist then
                 dist = mag
@@ -27,20 +22,20 @@ local function getClosestPlayer()
     return closest
 end
 
--- Remove bind anterior para evitar duplicidade
 if _G.AimLockRenderConn then _G.AimLockRenderConn:Disconnect() end
 
 _G.AimLockRenderConn = RunService.RenderStepped:Connect(function()
     if not _G.AimLockEnabled then return end
+    local char = player.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
     local target = getClosestPlayer()
-    if target and target.Character and target.Character:FindFirstChild("Head") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local root = player.Character.HumanoidRootPart
+    if target and target.Character and target.Character:FindFirstChild("Head") and root then
         local targetPos = target.Character.Head.Position
         local myPos = root.Position
-        -- Mantém a altura do corpo (não inclina para cima/baixo)
         local lookAt = Vector3.new(targetPos.X, myPos.Y, targetPos.Z)
         root.CFrame = CFrame.new(myPos, lookAt)
-        -- Opcional: também fazer a câmera mirar junto
-        -- camera.CFrame = CFrame.new(camera.CFrame.Position, target.Character.Head.Position)
+        -- Faz a câmera mirar exatamente para a cabeça do inimigo
+        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
     end
 end)
