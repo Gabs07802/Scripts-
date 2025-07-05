@@ -1,28 +1,25 @@
---[[ NOCLIP FiveM Style - Versão Corrigida ]]
+--[[ FREECAM + TP FiveM Style (ativa/desativa pelo menu) ]]
+
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local Run = game:GetService("RunService")
-local workspace = game:GetService("Workspace")
+local Workspace = game:GetService("Workspace")
 
 local plr = Players.LocalPlayer
 local char = plr.Character or plr.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 local hum = char:FindFirstChildOfClass("Humanoid")
-local camera = workspace.CurrentCamera
+local camera = Workspace.CurrentCamera
 
-if _G.noclipConn then pcall(function() _G.noclipConn:Disconnect() end) end
-if _G.noclipStep then pcall(function() _G.noclipStep:Disconnect() end) end
-_G.noclipping = true
+-- Evita múltiplas execuções antigas
+if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) end
+if _G.freecamStep then pcall(function() _G.freecamStep:Disconnect() end) end
+_G.freecaming = true
 
-local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
-local moveDir = Vector3.new()
-local noclipSpeed, maxSpeed, minSpeed = 60, 300, 10
-local up, down = false, false
-
--- Remove GUI antiga
-pcall(function() if plr.PlayerGui:FindFirstChild("NOCLIPGUI") then plr.PlayerGui.NOCLIPGUI:Destroy() end end)
+-- GUI
+pcall(function() if plr.PlayerGui:FindFirstChild("FREECAMGUI") then plr.PlayerGui.FREECAMGUI:Destroy() end end)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "NOCLIPGUI"
+gui.Name = "FREECAMGUI"
 gui.ResetOnSpawn = false
 
 local txt = Instance.new("TextLabel", gui)
@@ -35,7 +32,7 @@ txt.TextColor3 = Color3.fromRGB(180,85,85)
 txt.TextStrokeTransparency = 0.6
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 22
-txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X ou +/- = Velocidade"
+txt.Text = "FREECAM: WASD/mouse ou analógico | TP = teleporte"
 
 local tpBtn = Instance.new("TextButton", gui)
 tpBtn.Size = UDim2.new(0,120,0,44)
@@ -50,6 +47,13 @@ tpBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 tpBtn.ZIndex = 10
 local tpCorner = Instance.new("UICorner", tpBtn)
 tpCorner.CornerRadius = UDim.new(1,0)
+
+-- Mobile controls (opcional)
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+local freecamSpeed, maxSpeed, minSpeed = 60, 300, 10
+local up, down = false, false
+local moveDir = Vector3.new()
+local lastCamPos = camera.CFrame.Position
 
 local mobileBtns = {}
 if isMobile then
@@ -75,12 +79,10 @@ if isMobile then
     mobileBtns.down = makeBtn("↓", UDim2.new(1,-105,1,-110), 44)
 
     mobileBtns.plus.MouseButton1Click:Connect(function()
-        noclipSpeed = math.min(maxSpeed, noclipSpeed+10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | +/- = Velocidade"
+        freecamSpeed = math.min(maxSpeed, freecamSpeed+10)
     end)
     mobileBtns.minus.MouseButton1Click:Connect(function()
-        noclipSpeed = math.max(minSpeed, noclipSpeed-10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | +/- = Velocidade"
+        freecamSpeed = math.max(minSpeed, freecamSpeed-10)
     end)
     mobileBtns.up.MouseButton1Down:Connect(function() up=true end)
     mobileBtns.up.MouseButton1Up:Connect(function() up=false end)
@@ -88,20 +90,20 @@ if isMobile then
     mobileBtns.down.MouseButton1Up:Connect(function() down=false end)
 end
 
--- Trava personagem
+-- Freecam setup
+local freecamCF = camera.CFrame
+
+-- Deixa personagem imóvel
 hrp.Anchored = true
 if hum then hum.PlatformStand = true end
 
-local freecamCF = camera.CFrame
-
-_G.noclipConn = UIS.InputBegan:Connect(function(input, gpe)
+-- INPUT PC para velocidade e subir/descer câmera
+_G.freecamConn = UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Z then
-        noclipSpeed = math.max(minSpeed, noclipSpeed-10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X = Velocidade"
+        freecamSpeed = math.max(minSpeed, freecamSpeed-10)
     elseif input.KeyCode == Enum.KeyCode.X then
-        noclipSpeed = math.min(maxSpeed, noclipSpeed+10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X = Velocidade"
+        freecamSpeed = math.min(maxSpeed, freecamSpeed+10)
     elseif input.KeyCode == Enum.KeyCode.Space then
         up = true
     elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
@@ -116,25 +118,29 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
-_G.noclipStep = Run.RenderStepped:Connect(function(dt)
-    if not _G.noclipping then return end
+-- Freecam loop
+_G.freecamStep = Run.RenderStepped:Connect(function(dt)
+    if not _G.freecaming then return end
 
     local camCF = freecamCF
     moveDir = Vector3.new()
+    -- PC: WASD movimenta câmera
     if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
     if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
     if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
     if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
     if up then moveDir = moveDir + Vector3.new(0,1,0) end
     if down then moveDir = moveDir - Vector3.new(0,1,0) end
+    -- Mobile: usa MoveDirection do humanoid
     if isMobile and hum.MoveDirection.Magnitude > 0 then
         moveDir = moveDir + hum.MoveDirection
     end
+
     if moveDir.Magnitude > 0 then
-        freecamCF = freecamCF + (moveDir.Unit * noclipSpeed * dt)
+        freecamCF = freecamCF + (moveDir.Unit * freecamSpeed * dt)
     end
 
-    -- Mouse look (PC)
+    -- Mouse Look (PC)
     if not isMobile and UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
         UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
     end
@@ -148,32 +154,31 @@ _G.noclipStep = Run.RenderStepped:Connect(function(dt)
     end
 
     camera.CFrame = freecamCF
+    lastCamPos = camera.CFrame.Position
 end)
 
+-- Botão TP: teleporta personagem para última posição da câmera e respeita física
 tpBtn.MouseButton1Click:Connect(function()
-    local pos = camera.CFrame.Position
-    hrp.CFrame = CFrame.new(pos + Vector3.new(0,2,0))
+    hrp.CFrame = CFrame.new(lastCamPos + Vector3.new(0,2,0))
     hrp.Anchored = false
     if hum then hum.PlatformStand = false end
 end)
 
--- clean-up function para desligar pelo menu
-_G.noclip_cleanup = function()
-    _G.noclipping = false
-    if _G.noclipConn then pcall(function() _G.noclipConn:Disconnect() end) _G.noclipConn = nil end
-    if _G.noclipStep then pcall(function() _G.noclipStep:Disconnect() end) _G.noclipStep = nil end
+-- Clean-up para desligar via menu
+_G.freecam_cleanup = function()
+    _G.freecaming = false
+    if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) _G.freecamConn = nil end
+    if _G.freecamStep then pcall(function() _G.freecamStep:Disconnect() end) _G.freecamStep = nil end
     pcall(function() gui:Destroy() end)
     camera.CameraSubject = hum or hrp
     camera.CameraType = Enum.CameraType.Custom
     hrp.Anchored = false
     if hum then hum.PlatformStand = false end
-    if not isMobile then
-        UIS.MouseBehavior = Enum.MouseBehavior.Default
-    end
+    if not isMobile then UIS.MouseBehavior = Enum.MouseBehavior.Default end
 end
 
 char.AncestryChanged:Connect(function()
-    if not char:IsDescendantOf(workspace) then
-        _G.noclip_cleanup()
+    if not char:IsDescendantOf(Workspace) then
+        _G.freecam_cleanup()
     end
 end)
