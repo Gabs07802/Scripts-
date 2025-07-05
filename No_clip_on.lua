@@ -1,35 +1,23 @@
---[[
-  NOCLIP FiveM Style v1 (Ativar pelo menu)
-  - Câmera livre, personagem parado.
-  - Botão "TP": teleporta personagem para posição da câmera (com física normal).
-  - Ao desativar, câmera volta pro personagem.
-  - PC e Mobile.
-  - Use loadstring para ligar/desligar pelo menu!
-]]
-
+--[[ NOCLIP FiveM Style - Versão Corrigida ]]
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local Run = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local workspace = game:GetService("Workspace")
 
 local plr = Players.LocalPlayer
 local char = plr.Character or plr.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 local hum = char:FindFirstChildOfClass("Humanoid")
-local camera = Workspace.CurrentCamera
+local camera = workspace.CurrentCamera
 
--- Evita múltiplas execuções
-if _G.noclipConn then _G.noclipConn:Disconnect() end
-if _G.noclipStep then _G.noclipStep:Disconnect() end
+if _G.noclipConn then pcall(function() _G.noclipConn:Disconnect() end) end
+if _G.noclipStep then pcall(function() _G.noclipStep:Disconnect() end) end
 _G.noclipping = true
 
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 local moveDir = Vector3.new()
 local noclipSpeed, maxSpeed, minSpeed = 60, 300, 10
 local up, down = false, false
-local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
-
--- Freecam
-local freecamCF = camera.CFrame
 
 -- Remove GUI antiga
 pcall(function() if plr.PlayerGui:FindFirstChild("NOCLIPGUI") then plr.PlayerGui.NOCLIPGUI:Destroy() end end)
@@ -47,9 +35,8 @@ txt.TextColor3 = Color3.fromRGB(180,85,85)
 txt.TextStrokeTransparency = 0.6
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 22
-txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP para teleportar | Z/X ou +/- = Velocidade"
+txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X ou +/- = Velocidade"
 
--- Botão TP
 local tpBtn = Instance.new("TextButton", gui)
 tpBtn.Size = UDim2.new(0,120,0,44)
 tpBtn.AnchorPoint = Vector2.new(0.5,1)
@@ -64,7 +51,6 @@ tpBtn.ZIndex = 10
 local tpCorner = Instance.new("UICorner", tpBtn)
 tpCorner.CornerRadius = UDim.new(1,0)
 
--- Mobile botões
 local mobileBtns = {}
 if isMobile then
     local function makeBtn(txtLabel, pos, size)
@@ -90,11 +76,11 @@ if isMobile then
 
     mobileBtns.plus.MouseButton1Click:Connect(function()
         noclipSpeed = math.min(maxSpeed, noclipSpeed+10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP para teleportar | +/- = Velocidade"
+        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | +/- = Velocidade"
     end)
     mobileBtns.minus.MouseButton1Click:Connect(function()
         noclipSpeed = math.max(minSpeed, noclipSpeed-10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP para teleportar | +/- = Velocidade"
+        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | +/- = Velocidade"
     end)
     mobileBtns.up.MouseButton1Down:Connect(function() up=true end)
     mobileBtns.up.MouseButton1Up:Connect(function() up=false end)
@@ -106,15 +92,16 @@ end
 hrp.Anchored = true
 if hum then hum.PlatformStand = true end
 
--- INPUT PC
+local freecamCF = camera.CFrame
+
 _G.noclipConn = UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Z then
         noclipSpeed = math.max(minSpeed, noclipSpeed-10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP para teleportar | Z/X = Velocidade"
+        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X = Velocidade"
     elseif input.KeyCode == Enum.KeyCode.X then
         noclipSpeed = math.min(maxSpeed, noclipSpeed+10)
-        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP para teleportar | Z/X = Velocidade"
+        txt.Text = "NOCLIP: "..tostring(noclipSpeed).." | TP = teleportar | Z/X = Velocidade"
     elseif input.KeyCode == Enum.KeyCode.Space then
         up = true
     elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
@@ -129,7 +116,6 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- FREECAM LOOP
 _G.noclipStep = Run.RenderStepped:Connect(function(dt)
     if not _G.noclipping then return end
 
@@ -142,12 +128,13 @@ _G.noclipStep = Run.RenderStepped:Connect(function(dt)
     if up then moveDir = moveDir + Vector3.new(0,1,0) end
     if down then moveDir = moveDir - Vector3.new(0,1,0) end
     if isMobile and hum.MoveDirection.Magnitude > 0 then
-        moveDir = moveDir + (camCF.Rotation:VectorToWorldSpace(hum.MoveDirection))
+        moveDir = moveDir + hum.MoveDirection
     end
     if moveDir.Magnitude > 0 then
         freecamCF = freecamCF + (moveDir.Unit * noclipSpeed * dt)
     end
-    -- Mouse Look (PC)
+
+    -- Mouse look (PC)
     if not isMobile and UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
         UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
     end
@@ -159,10 +146,10 @@ _G.noclipStep = Run.RenderStepped:Connect(function(dt)
             freecamCF = freecamCF * CFrame.Angles(-delta.Y * sens * dt, 0, 0)
         end
     end
+
     camera.CFrame = freecamCF
 end)
 
--- Botão TP
 tpBtn.MouseButton1Click:Connect(function()
     local pos = camera.CFrame.Position
     hrp.CFrame = CFrame.new(pos + Vector3.new(0,2,0))
@@ -170,11 +157,11 @@ tpBtn.MouseButton1Click:Connect(function()
     if hum then hum.PlatformStand = false end
 end)
 
--- Desativar tudo (para usar no menu)
+-- clean-up function para desligar pelo menu
 _G.noclip_cleanup = function()
     _G.noclipping = false
-    if _G.noclipConn then _G.noclipConn:Disconnect() _G.noclipConn = nil end
-    if _G.noclipStep then _G.noclipStep:Disconnect() _G.noclipStep = nil end
+    if _G.noclipConn then pcall(function() _G.noclipConn:Disconnect() end) _G.noclipConn = nil end
+    if _G.noclipStep then pcall(function() _G.noclipStep:Disconnect() end) _G.noclipStep = nil end
     pcall(function() gui:Destroy() end)
     camera.CameraSubject = hum or hrp
     camera.CameraType = Enum.CameraType.Custom
@@ -186,7 +173,7 @@ _G.noclip_cleanup = function()
 end
 
 char.AncestryChanged:Connect(function()
-    if not char:IsDescendantOf(Workspace) then
+    if not char:IsDescendantOf(workspace) then
         _G.noclip_cleanup()
     end
 end)
