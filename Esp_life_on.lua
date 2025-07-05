@@ -14,7 +14,7 @@ local function addEspLife(plr)
     bb.Name = "EspLifeSimple"
     bb.Adornee = plr.Character.Head
     bb.Size = UDim2.new(0,70,0,15)
-    bb.StudsOffset = Vector3.new(0,2.5,0)
+    bb.StudsOffset = Vector3.new(0,4,0)
     bb.AlwaysOnTop = true
     bb.Parent = plr.Character.Head
     local txt = Instance.new("TextLabel")
