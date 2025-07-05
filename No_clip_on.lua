@@ -1,4 +1,4 @@
---[[ FREECAM + TP estilo FiveM (olhar livre com mouse ou touch, personagem imóvel, botão TP) ]]
+--[[ FREECAM puro estilo FiveM/Roblox (olhar/mover livre, sem TP, movimento sempre para direção da câmera) ]]
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -22,7 +22,7 @@ local oldJumpPower = hum.JumpPower
 hum.WalkSpeed = 0
 hum.JumpPower = 0
 
--- GUI
+-- GUI simples
 pcall(function() if plr.PlayerGui:FindFirstChild("FREECAMGUI") then plr.PlayerGui.FREECAMGUI:Destroy() end end)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "FREECAMGUI"
@@ -30,36 +30,21 @@ gui.ResetOnSpawn = false
 
 local txt = Instance.new("TextLabel", gui)
 txt.AnchorPoint = Vector2.new(0.5,1)
-txt.Position = UDim2.new(0.5,0,1,-80)
-txt.Size = UDim2.new(0,320,0,36)
+txt.Position = UDim2.new(0.5,0,1,-40)
+txt.Size = UDim2.new(0,390,0,34)
 txt.BackgroundTransparency = 0.35
 txt.BackgroundColor3 = Color3.fromRGB(30,30,30)
 txt.TextColor3 = Color3.fromRGB(180,85,85)
 txt.TextStrokeTransparency = 0.6
 txt.Font = Enum.Font.GothamBold
 txt.TextSize = 22
-txt.Text = "FREECAM: WASD/mouse ou analógico/touch | TP = teleporte"
-
-local tpBtn = Instance.new("TextButton", gui)
-tpBtn.Size = UDim2.new(0,120,0,44)
-tpBtn.AnchorPoint = Vector2.new(0.5,1)
-tpBtn.Position = UDim2.new(0.5,0,1,-35)
-tpBtn.Text = "TP"
-tpBtn.TextColor3 = Color3.fromRGB(255,255,255)
-tpBtn.Font = Enum.Font.GothamBold
-tpBtn.TextSize = 26
-tpBtn.BackgroundTransparency = 0.13
-tpBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-tpBtn.ZIndex = 10
-local tpCorner = Instance.new("UICorner", tpBtn)
-tpCorner.CornerRadius = UDim.new(1,0)
+txt.Text = "FREECAM: WASD/mouse ou analógico/touch | Z/X +/- velocidade"
 
 -- Mobile controls
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 local freecamSpeed, maxSpeed, minSpeed = 60, 300, 10
 local up, down = false, false
 local moveDir = Vector3.new()
-local lastCamPos = camera.CFrame.Position
 
 local mobileBtns = {}
 if isMobile then
@@ -79,16 +64,18 @@ if isMobile then
         c.CornerRadius = UDim.new(1,0)
         return b
     end
-    mobileBtns.plus = makeBtn("+", UDim2.new(1,-70,1,-170), 56)
-    mobileBtns.minus = makeBtn("-", UDim2.new(1,-140,1,-170), 56)
-    mobileBtns.up = makeBtn("↑", UDim2.new(1,-105,1,-235), 44)
-    mobileBtns.down = makeBtn("↓", UDim2.new(1,-105,1,-110), 44)
+    mobileBtns.plus = makeBtn("+", UDim2.new(1,-70,1,-120), 50)
+    mobileBtns.minus = makeBtn("-", UDim2.new(1,-130,1,-120), 50)
+    mobileBtns.up = makeBtn("↑", UDim2.new(1,-100,1,-185), 40)
+    mobileBtns.down = makeBtn("↓", UDim2.new(1,-100,1,-65), 40)
 
     mobileBtns.plus.MouseButton1Click:Connect(function()
         freecamSpeed = math.min(maxSpeed, freecamSpeed+10)
+        txt.Text = "FREECAM: WASD/mouse ou analógico/touch | Z/X +/- velocidade ("..freecamSpeed..")"
     end)
     mobileBtns.minus.MouseButton1Click:Connect(function()
         freecamSpeed = math.max(minSpeed, freecamSpeed-10)
+        txt.Text = "FREECAM: WASD/mouse ou analógico/touch | Z/X +/- velocidade ("..freecamSpeed..")"
     end)
     mobileBtns.up.MouseButton1Down:Connect(function() up=true end)
     mobileBtns.up.MouseButton1Up:Connect(function() up=false end)
@@ -120,8 +107,10 @@ _G.freecamConn = UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.Z then
         freecamSpeed = math.max(minSpeed, freecamSpeed-10)
+        txt.Text = "FREECAM: WASD/mouse ou analógico/touch | Z/X +/- velocidade ("..freecamSpeed..")"
     elseif input.KeyCode == Enum.KeyCode.X then
         freecamSpeed = math.min(maxSpeed, freecamSpeed+10)
+        txt.Text = "FREECAM: WASD/mouse ou analógico/touch | Z/X +/- velocidade ("..freecamSpeed..")"
     elseif input.KeyCode == Enum.KeyCode.Space then
         up = true
     elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
@@ -174,38 +163,32 @@ _G.freecamStep = Run.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- Calcula CFrame da câmera com pitch/yaw livre
-    local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
-    local freecamCF = CFrame.new(freecamPos) * rot
+    -- Calcula CFrame da câmera com pitch/yaw livre (ordem correta: YAW depois PITCH)
+    local camCF = CFrame.new(freecamPos)
+        * CFrame.Angles(0, yaw, 0)
+        * CFrame.Angles(pitch, 0, 0)
 
+    -- MOVIMENTO: WASD/touch/analógico sempre para onde a câmera ESTÁ OLHANDO
     moveDir = Vector3.new()
-    -- PC: WASD movimenta câmera
-    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + freecamCF.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - freecamCF.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + freecamCF.RightVector end
-    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - freecamCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
     if up then moveDir = moveDir + Vector3.new(0,1,0) end
     if down then moveDir = moveDir - Vector3.new(0,1,0) end
-    -- Mobile: usa MoveDirection do humanoid (analógico)
     if isMobile and hum.MoveDirection.Magnitude > 0 then
-        moveDir = moveDir + freecamCF.Rotation:VectorToWorldSpace(hum.MoveDirection)
+        moveDir = moveDir + camCF.Rotation:VectorToWorldSpace(hum.MoveDirection)
     end
 
     if moveDir.Magnitude > 0 then
         freecamPos = freecamPos + (moveDir.Unit * freecamSpeed * dt)
-        freecamCF = CFrame.new(freecamPos) * rot
+        -- não atualiza rotação, só posição!
+        camCF = CFrame.new(freecamPos)
+            * CFrame.Angles(0, yaw, 0)
+            * CFrame.Angles(pitch, 0, 0)
     end
 
-    camera.CFrame = freecamCF
-    lastCamPos = freecamCF.Position
-end)
-
-tpBtn.MouseButton1Click:Connect(function()
-    hrp.CFrame = CFrame.new(lastCamPos + Vector3.new(0,2,0))
-    hrp.Anchored = false
-    if hum then hum.PlatformStand = false end
-    hum.WalkSpeed = oldWalkSpeed
-    hum.JumpPower = oldJumpPower
+    camera.CFrame = camCF
 end)
 
 _G.freecam_cleanup = function()
