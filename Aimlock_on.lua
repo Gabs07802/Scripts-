@@ -1,80 +1,71 @@
--- Aimlock para armas: faz toda tool com nome "arma", "gun", "fall" etc mirar no inimigo mais próximo
-_G.AimLockToolEnabled = true
+-- Script de Aimlock para Roblox
 
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- Função para achar o inimigo mais próximo
-local function getClosestPlayer()
-    local closest, dist = nil, math.huge
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
-            local headPos = plr.Character.Head.Position
-            local myPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or camera.CFrame.Position
-            local mag = (myPos - headPos).Magnitude
-            if mag < dist then
-                dist = mag
-                closest = plr
+-- Config: Defina como ativar o Aimlock
+local aimlockAtivado = false -- Você pode ligar/desligar pelo menu
+
+-- Função para encontrar o inimigo mais próximo (exemplo simples)
+local function EncontrarInimigo()
+    local inimigoMaisProximo = nil
+    local menorDistancia = math.huge
+
+    for _, jogador in pairs(Players:GetPlayers()) do
+        if jogador ~= LocalPlayer and jogador.Character and jogador.Character:FindFirstChild("HumanoidRootPart") and jogador.Team ~= LocalPlayer.Team then
+            local distancia = (LocalPlayer.Character.HumanoidRootPart.Position - jogador.Character.HumanoidRootPart.Position).Magnitude
+            if distancia < menorDistancia then
+                menorDistancia = distancia
+                inimigoMaisProximo = jogador
             end
         end
     end
-    return closest
+    return inimigoMaisProximo
 end
 
--- Função para identificar se é arma/tool relevante
-local function isWeapon(tool)
-    if not tool or not tool:IsA("Tool") then return false end
-    local n = tool.Name:lower()
-    return n:find("arma") or n:find("gun") or n:find("fall")
-end
+local function ApontarParaInimigo(inimigo)
+    if not inimigo or not inimigo.Character or not inimigo.Character:FindFirstChild("HumanoidRootPart") then return end
+    local inimigoPos = inimigo.Character.HumanoidRootPart.Position
+    local personagem = LocalPlayer.Character
 
--- Função para alinhar a arma para o inimigo
-local function alignTool(tool, targetPosition)
-    -- O método depende do modelo da arma, mas geralmente: 
-    -- Se a arma tem um "Handle", alinhe o Handle.
-    local handle = tool:FindFirstChild("Handle")
-    if handle and handle:IsA("BasePart") then
-        handle.CFrame = CFrame.new(handle.Position, targetPosition)
-    else
-        -- Se não tiver Handle, tenta alinhar todos os BaseParts filhos dela
-        for _,part in ipairs(tool:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CFrame = CFrame.new(part.Position, targetPosition)
-            end
+    -- Rotacionar corpo inteiro
+    if personagem and personagem:FindFirstChild("HumanoidRootPart") then
+        personagem.HumanoidRootPart.CFrame = CFrame.new(personagem.HumanoidRootPart.Position, inimigoPos)
+    end
+
+    -- Rotacionar membros (braços, pernas, cabeça)
+    for _, parte in ipairs(personagem:GetChildren()) do
+        if parte:IsA("BasePart") and parte.Name ~= "HumanoidRootPart" then
+            parte.CFrame = CFrame.new(parte.Position, inimigoPos)
         end
     end
-end
 
--- Remove bind anterior para evitar duplicidade
-if _G.AimLockToolRenderConn then _G.AimLockToolRenderConn:Disconnect() end
-
-_G.AimLockToolRenderConn = RunService.RenderStepped:Connect(function()
-    if not _G.AimLockToolEnabled then return end
-    local char = player.Character
-    if not char then return end
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-    if not humanoid then return end
-
-    -- Ferramenta equipada
-    local tool = humanoid and humanoid:FindFirstChildOfClass("Tool")
-    if not tool and char then
-        -- Também tenta achar diretamente no Character, caso a arma não esteja Parent como Tool
-        for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("Tool") and isWeapon(child) then
-                tool = child
-                break
+    -- Apontar itens equipados
+    local tool = personagem:FindFirstChildOfClass("Tool")
+    if tool then
+        for _, item in ipairs(tool:GetDescendants()) do
+            if item:IsA("BasePart") then
+                item.CFrame = CFrame.new(item.Position, inimigoPos)
             end
         end
     end
 
-    if tool and isWeapon(tool) then
-        local target = getClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            local targetPos = target.Character.Head.Position
-            alignTool(tool, targetPos)
+    -- Apontar câmera/tela
+    Camera.CFrame = CFrame.new(Camera.CFrame.Position, inimigoPos)
+end
+
+-- Loop principal
+RunService.RenderStepped:Connect(function()
+    if aimlockAtivado then
+        local alvo = EncontrarInimigo()
+        if alvo then
+            ApontarParaInimigo(alvo)
         end
     end
 end)
+
+-- Exemplo de ativação/desativação via menu (troque por seu código de menu)
+-- aimlockAtivado = true -- Para ligar
+-- aimlockAtivado = false -- Para desligar
