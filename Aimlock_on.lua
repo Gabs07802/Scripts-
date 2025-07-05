@@ -1,15 +1,17 @@
---# Aimlock Completo Ativado (Câmera, Corpo e Arma)
-if getgenv()._AIMLOCK_FULL_CONNECTIONS then return end
+--# Aimlock Upper Body Only (Tronco para cima)
+if getgenv()._AIMLOCK_UPPER_ONLY then return end
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
-local AIM_PART = "Head" -- Head ou UpperTorso
-local AIM_FOV = 400     -- raio em pixels para procurar alvo
+local RunService = game:GetService("RunService")
 
-getgenv()._AIMLOCK_FULL_ACTIVE = true
-getgenv()._AIMLOCK_FULL_CONNECTIONS = {}
+local AIM_PART = "Head"         -- Parte do inimigo para mirar
+local AIM_FOV = 400             -- Pixels de raio para procurar alvo
+local UPPER_PARTS = {"UpperTorso", "Head"} -- R15. Se for R6, use {"Torso", "Head"}
+
+getgenv()._AIMLOCK_UPPER_ONLY = true
+getgenv()._AIMLOCK_UPPER_CONN = nil
 
 local function getClosestTarget()
     local closest, shortest = nil, AIM_FOV
@@ -28,63 +30,37 @@ local function getClosestTarget()
     return closest
 end
 
-local function faceTargetCF(part, targetPos)
-    -- Gera um CFrame para olhar para targetPos, mas mantém altura do personagem
-    local pos = part.Position
-    local look = Vector3.new(targetPos.X, pos.Y, targetPos.Z)
-    return CFrame.new(pos, look)
-end
+local function aimUpperBody(targetPos)
+    local char = LocalPlayer.Character
+    if not char then return end
 
-local function toolPointTo(part, targetPos)
-    -- Aponta qualquer Tool equipada para targetPos
-    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+    -- Aponta Head e UpperTorso/Torso para o alvo, respeitando altura original
+    for _, partName in ipairs(UPPER_PARTS) do
+        local part = char:FindFirstChild(partName)
+        if part then
+            local pos = part.Position
+            local look = Vector3.new(targetPos.X, pos.Y, targetPos.Z)
+            part.CFrame = CFrame.new(pos, look)
+        end
+    end
+
+    -- Aponta arma, se equipada
+    local tool = char:FindFirstChildOfClass("Tool")
     if tool and tool:FindFirstChild("Handle") then
-        -- Move/rotaciona Handle para mirar (pode depender do tipo de arma)
-        local handle = tool.Handle
         pcall(function()
-            handle.CFrame = CFrame.new(handle.Position, targetPos)
+            tool.Handle.CFrame = CFrame.new(tool.Handle.Position, targetPos)
         end)
     end
 end
 
--- RenderStepped: Câmera e corpo
-getgenv()._AIMLOCK_FULL_CONNECTIONS.render = RunService.RenderStepped:Connect(function()
-    if not getgenv()._AIMLOCK_FULL_ACTIVE then return end
+getgenv()._AIMLOCK_UPPER_CONN = RunService.RenderStepped:Connect(function()
+    if not getgenv()._AIMLOCK_UPPER_ONLY then return end
     local target = getClosestTarget()
     if target and target.Character and target.Character:FindFirstChild(AIM_PART) then
         local targetPos = target.Character[AIM_PART].Position
-
         -- Câmera
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-
-        -- Corpo todo (HumanoidRootPart)
-        local chr = LocalPlayer.Character
-        if chr and chr:FindFirstChild("HumanoidRootPart") then
-            chr.HumanoidRootPart.CFrame = faceTargetCF(chr.HumanoidRootPart, targetPos)
-        end
-
-        -- (Opcional) Rotaciona UpperTorso e Head para olhar também
-        if chr:FindFirstChild("UpperTorso") then
-            chr.UpperTorso.CFrame = faceTargetCF(chr.UpperTorso, targetPos)
-        end
-        if chr:FindFirstChild("Head") then
-            chr.Head.CFrame = faceTargetCF(chr.Head, targetPos)
-        end
-
-        -- Arma/item equipado
-        toolPointTo(chr, targetPos)
-    end
-end)
-
--- Também faz o mesmo ao usar qualquer Tool
-getgenv()._AIMLOCK_FULL_CONNECTIONS.tool = LocalPlayer.Character.ChildAdded:Connect(function(obj)
-    if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-        local target = getClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild(AIM_PART) then
-            local targetPos = target.Character[AIM_PART].Position
-            pcall(function()
-                obj.Handle.CFrame = CFrame.new(obj.Handle.Position, targetPos)
-            end)
-        end
+        -- Upper body
+        aimUpperBody(targetPos)
     end
 end)
