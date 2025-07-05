@@ -1,4 +1,4 @@
---[[ FREECAM + TP FiveM Style (ativa/desativa pelo menu) ]]
+--[[ FREECAM + TP FiveM Style (corrigido: personagem imóvel e mouse look real) ]]
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -15,6 +15,12 @@ local camera = Workspace.CurrentCamera
 if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) end
 if _G.freecamStep then pcall(function() _G.freecamStep:Disconnect() end) end
 _G.freecaming = true
+
+-- Salva valores originais do personagem para restaurar depois
+local oldWalkSpeed = hum.WalkSpeed
+local oldJumpPower = hum.JumpPower
+hum.WalkSpeed = 0
+hum.JumpPower = 0
 
 -- GUI
 pcall(function() if plr.PlayerGui:FindFirstChild("FREECAMGUI") then plr.PlayerGui.FREECAMGUI:Destroy() end end)
@@ -48,7 +54,7 @@ tpBtn.ZIndex = 10
 local tpCorner = Instance.new("UICorner", tpBtn)
 tpCorner.CornerRadius = UDim.new(1,0)
 
--- Mobile controls (opcional)
+-- Mobile controls
 local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 local freecamSpeed, maxSpeed, minSpeed = 60, 300, 10
 local up, down = false, false
@@ -90,10 +96,17 @@ if isMobile then
     mobileBtns.down.MouseButton1Up:Connect(function() down=false end)
 end
 
--- Freecam setup
 local freecamCF = camera.CFrame
+local pitch, yaw = 0, 0
 
--- Deixa personagem imóvel
+-- Inicializa yaw/pitch da câmera atual
+do
+    local look = freecamCF.LookVector
+    yaw = math.atan2(-look.X, -look.Z)
+    pitch = math.asin(look.Y)
+end
+
+-- Deixa personagem imóvel (além do WalkSpeed=0)
 hrp.Anchored = true
 if hum then hum.PlatformStand = true end
 
@@ -118,17 +131,32 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- Freecam loop
 _G.freecamStep = Run.RenderStepped:Connect(function(dt)
     if not _G.freecaming then return end
 
-    local camCF = freecamCF
+    -- Mouse Look (PC)
+    if not isMobile then
+        if UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
+            UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+        end
+        local delta = UIS:GetMouseDelta()
+        if delta.Magnitude ~= 0 then
+            local sens = 0.18
+            yaw = yaw - delta.X * sens * dt
+            pitch = math.clamp(pitch - delta.Y * sens * dt, -math.rad(89), math.rad(89))
+        end
+    end
+
+    -- Calcula CFrame da câmera com pitch/yaw livre
+    local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
+    freecamCF = CFrame.new(freecamCF.Position) * rot
+
     moveDir = Vector3.new()
     -- PC: WASD movimenta câmera
-    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camCF.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camCF.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
-    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + freecamCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - freecamCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + freecamCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - freecamCF.RightVector end
     if up then moveDir = moveDir + Vector3.new(0,1,0) end
     if down then moveDir = moveDir - Vector3.new(0,1,0) end
     -- Mobile: usa MoveDirection do humanoid
@@ -140,31 +168,18 @@ _G.freecamStep = Run.RenderStepped:Connect(function(dt)
         freecamCF = freecamCF + (moveDir.Unit * freecamSpeed * dt)
     end
 
-    -- Mouse Look (PC)
-    if not isMobile and UIS.MouseBehavior ~= Enum.MouseBehavior.LockCenter then
-        UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-    end
-    if not isMobile then
-        local delta = UIS:GetMouseDelta()
-        if delta.Magnitude > 0 then
-            local sens = 0.25
-            freecamCF = freecamCF * CFrame.Angles(0, -delta.X * sens * dt, 0)
-            freecamCF = freecamCF * CFrame.Angles(-delta.Y * sens * dt, 0, 0)
-        end
-    end
-
     camera.CFrame = freecamCF
     lastCamPos = camera.CFrame.Position
 end)
 
--- Botão TP: teleporta personagem para última posição da câmera e respeita física
 tpBtn.MouseButton1Click:Connect(function()
     hrp.CFrame = CFrame.new(lastCamPos + Vector3.new(0,2,0))
     hrp.Anchored = false
     if hum then hum.PlatformStand = false end
+    hum.WalkSpeed = oldWalkSpeed
+    hum.JumpPower = oldJumpPower
 end)
 
--- Clean-up para desligar via menu
 _G.freecam_cleanup = function()
     _G.freecaming = false
     if _G.freecamConn then pcall(function() _G.freecamConn:Disconnect() end) _G.freecamConn = nil end
@@ -174,6 +189,8 @@ _G.freecam_cleanup = function()
     camera.CameraType = Enum.CameraType.Custom
     hrp.Anchored = false
     if hum then hum.PlatformStand = false end
+    hum.WalkSpeed = oldWalkSpeed
+    hum.JumpPower = oldJumpPower
     if not isMobile then UIS.MouseBehavior = Enum.MouseBehavior.Default end
 end
 
