@@ -1,4 +1,4 @@
--- Desativa Aimlock corpo inteiro
-_G.AimLockEnabled = false
-if _G.AimLockRenderConn then _G.AimLockRenderConn:Disconnect() end
-_G.AimLockRenderConn = nil
+-- Desativa aimlock de armas/tools
+_G.AimLockToolEnabled = false
+if _G.AimLockToolRenderConn then _G.AimLockToolRenderConn:Disconnect() end
+_G.AimLockToolRenderConn = nil
