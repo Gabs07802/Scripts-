@@ -1,6 +1,6 @@
 -- AIMLOCK UNIVERSAL (BETA)
 -- Mira sempre centralizada, corpo do player e arma apontam juntos para o inimigo.
--- Suporte para ferramentas com nome: "arma", "Gun", "fall", "letal" (independente de maiúsculas/minúsculas)
+-- Suporte para ferramentas com nome: "arma", "Gun", "fall", "letal", "g17", "pistola", "pistolas" (independente de maiúsculas/minúsculas)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -9,6 +9,19 @@ local RunService = game:GetService("RunService")
 
 _G.AimlockActive = true
 _G.AimlockConn = nil
+
+-- Lista de nomes de armas (case-insensitive, parte do nome já funciona)
+local WEAPON_NAMES = {"arma", "gun", "fall", "letal", "g17", "pistola", "pistolas"}
+
+local function isWeapon(tool)
+    local name = tool.Name:lower()
+    for _,w in ipairs(WEAPON_NAMES) do
+        if name:find(w) then
+            return true
+        end
+    end
+    return false
+end
 
 local function getClosestTarget()
     local closestDist = math.huge
@@ -31,17 +44,14 @@ end
 local function getWeapon()
     if not LocalPlayer.Character then return nil end
     for _,tool in ipairs(LocalPlayer.Character:GetChildren()) do
-        if tool:IsA("Tool") then
-            local name = tool.Name:lower()
-            if name:find("arma") or name:find("gun") or name:find("fall") or name:find("letal") then
-                if tool:FindFirstChild("Handle") then
-                    return tool.Handle
-                else
-                    -- Se não tem Handle, tenta pegar a primeira BasePart
-                    for _,part in ipairs(tool:GetChildren()) do
-                        if part:IsA("BasePart") then
-                            return part
-                        end
+        if tool:IsA("Tool") and isWeapon(tool) then
+            if tool:FindFirstChild("Handle") then
+                return tool.Handle
+            else
+                -- Se não tem Handle, tenta pegar a primeira BasePart
+                for _,part in ipairs(tool:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        return part
                     end
                 end
             end
