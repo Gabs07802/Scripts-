@@ -1,4 +1,4 @@
--- Aimlock ON (sempre ativo enquanto ativado no menu)
+-- Aimlock "realista" ON: personagem e câmera sempre viram juntos para o inimigo mais próximo
 _G.AimLockEnabled = true
 
 local Players = game:GetService("Players")
@@ -23,7 +23,6 @@ local function getClosestPlayer()
     return closest
 end
 
--- Remove bind anterior para evitar duplicidade
 if _G.AimLockRenderConn then _G.AimLockRenderConn:Disconnect() end
 
 _G.AimLockRenderConn = RunService.RenderStepped:Connect(function()
@@ -32,10 +31,17 @@ _G.AimLockRenderConn = RunService.RenderStepped:Connect(function()
     if target and target.Character and target.Character:FindFirstChild("Head") then
         local myPos = camera.CFrame.Position
         local targetPos = target.Character.Head.Position
+
+        -- Mira a câmera
         camera.CFrame = CFrame.new(myPos, targetPos)
-        -- Para armas que seguem o corpo, descomente abaixo:
-        -- if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        --     player.Character.HumanoidRootPart.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position, targetPos)
-        -- end
+
+        -- Mira o personagem (com suavização opcional)
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local root = char.HumanoidRootPart
+            local lookAt = CFrame.new(root.Position, Vector3.new(targetPos.X, root.Position.Y, targetPos.Z))
+            -- Suavização: pode deixar sem Lerp se preferir instantâneo
+            root.CFrame = root.CFrame:Lerp(lookAt, 0.35)
+        end
     end
 end)
