@@ -1,13 +1,18 @@
---# Fly universal desativado
-getgenv()._FLY_ACTIVE = false
-if getgenv()._FLY_CONN then getgenv()._FLY_CONN:Disconnect() end
-getgenv()._FLY_CONN = nil
-if getgenv()._FLY_BTN then getgenv()._FLY_BTN:Destroy() end
--- Libera personagem
+--[[
+    FLY UNIVERSAL v3 (PC & MOBILE) - DESLIGAR
+    Desativa o modo voo, limpa animação, eventos, gui e devolve o personagem ao normal.
+--]]
+
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character
-if Character and Character:FindFirstChildOfClass("Humanoid") then
-    Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
-end
-print("[MOD MENU] Fly desativado.")
+local plr = Players.LocalPlayer
+local char = plr.Character or plr.CharacterAdded:Wait()
+local hum = char:FindFirstChildOfClass("Humanoid")
+
+_G.flying = false
+
+if _G.flyConn then pcall(function() _G.flyConn:Disconnect() end) _G.flyConn = nil end
+if _G.flyAnimTrack then pcall(function() _G.flyAnimTrack:Stop() end) _G.flyAnimTrack = nil end
+if _G.flyStep then pcall(function() _G.flyStep:Disconnect() end) _G.flyStep = nil end
+
+pcall(function() if plr.PlayerGui:FindFirstChild("FLYGUI") then plr.PlayerGui.FLYGUI:Destroy() end end)
+if hum then hum.PlatformStand = false end
