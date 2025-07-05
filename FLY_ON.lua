@@ -1,118 +1,170 @@
---# Fly universal (PC e Mobile) - Ativado
-if getgenv()._FLY_CONN then return end
-getgenv()._FLY_ACTIVE = true
+--[[
+    FLY UNIVERSAL v3 (PC & MOBILE) - LIGAR
+    - Teclas Z/X (PC) ou botões (+/-) (Mobile) para controlar velocidade do voo
+    - Espaço (PC) ou botão "↑" (Mobile) para subir, Shift (PC) ou botão "↓" (Mobile) para descer
+    - Não gira o personagem bruscamente, mantém postura natural
+    - Interface de controle só aparece em dispositivos mobile
+    - GUI mostra velocidade atual
+--]]
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
+local UIS = game:GetService("UserInputService")
+local Run = game:GetService("RunService")
 
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+local plr = Players.LocalPlayer
+local char = plr.Character or plr.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local hum = char:FindFirstChildOfClass("Humanoid")
 
--- Caso morra, desativa o fly
-if getgenv()._FLY_CHAR_DIED then getgenv()._FLY_CHAR_DIED:Disconnect() end
-getgenv()._FLY_CHAR_DIED = Humanoid.Died:Connect(function()
-    getgenv()._FLY_ACTIVE = false
-    if getgenv()._FLY_CONN then getgenv()._FLY_CONN:Disconnect() end
-    if getgenv()._FLY_BTN then getgenv()._FLY_BTN:Destroy() end
+if _G.flyConn then _G.flyConn:Disconnect() end
+if _G.flyStep then _G.flyStep:Disconnect() end
+_G.flying = true
+
+local flySpeed, maxSpeed, minSpeed = 50, 200, 10
+local moveDir = Vector3.new()
+local flyUp, flyDown = false, false
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+-- GUI global cleanup (old)
+pcall(function() if plr.PlayerGui:FindFirstChild("FLYGUI") then plr.PlayerGui.FLYGUI:Destroy() end end)
+local gui = Instance.new("ScreenGui", plr.PlayerGui)
+gui.Name = "FLYGUI"
+gui.ResetOnSpawn = false
+
+local txt = Instance.new("TextLabel", gui)
+txt.AnchorPoint = Vector2.new(0.5,1)
+txt.Position = UDim2.new(0.5,0,1,-80)
+txt.Size = UDim2.new(0,260,0,36)
+txt.BackgroundTransparency = 0.35
+txt.BackgroundColor3 = Color3.fromRGB(30,30,30)
+txt.TextColor3 = Color3.fromRGB(180,85,85)
+txt.TextStrokeTransparency = 0.6
+txt.Font = Enum.Font.GothamBold
+txt.TextSize = 22
+txt.Text = "FLY: "..tostring(flySpeed).." | Z/X = Velocidade"
+
+-- MOBILE BUTTONS
+local mobileBtns = {}
+if isMobile then
+    local function makeBtn(txtLabel, pos, size)
+        local b = Instance.new("TextButton", gui)
+        b.Text = txtLabel
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 28
+        b.Size = UDim2.new(0,size,0,size)
+        b.Position = pos
+        b.BackgroundColor3 = Color3.fromRGB(30,30,30)
+        b.TextColor3 = Color3.fromRGB(255,255,255)
+        b.BackgroundTransparency = 0.18
+        b.AutoButtonColor = true
+        b.ZIndex = 5
+        local c = Instance.new("UICorner", b)
+        c.CornerRadius = UDim.new(1,0)
+        return b
+    end
+    -- + Velocidade (direita)
+    mobileBtns.plus = makeBtn("+", UDim2.new(1,-70,1,-170), 56)
+    -- - Velocidade (esquerda)
+    mobileBtns.minus = makeBtn("-", UDim2.new(1,-140,1,-170), 56)
+    -- ↑ Subir (acima)
+    mobileBtns.up = makeBtn("↑", UDim2.new(1,-105,1,-235), 44)
+    -- ↓ Descer (abaixo)
+    mobileBtns.down = makeBtn("↓", UDim2.new(1,-105,1,-110), 44)
+    -- Botão de fechar fly
+    mobileBtns.close = makeBtn("✖", UDim2.new(1,-50,1,-50), 36)
+
+    mobileBtns.plus.MouseButton1Click:Connect(function()
+        flySpeed = math.min(maxSpeed, flySpeed+10)
+        txt.Text = "FLY: "..tostring(flySpeed).." | +/- = Velocidade"
+    end)
+    mobileBtns.minus.MouseButton1Click:Connect(function()
+        flySpeed = math.max(minSpeed, flySpeed-10)
+        txt.Text = "FLY: "..tostring(flySpeed).." | +/- = Velocidade"
+    end)
+    mobileBtns.up.MouseButton1Down:Connect(function() flyUp=true end)
+    mobileBtns.up.MouseButton1Up:Connect(function() flyUp=false end)
+    mobileBtns.down.MouseButton1Down:Connect(function() flyDown=true end)
+    mobileBtns.down.MouseButton1Up:Connect(function() flyDown=false end)
+    mobileBtns.close.MouseButton1Click:Connect(function()
+        _G.flying = false
+        gui:Destroy()
+        if hum then hum.PlatformStand = false end
+        if _G.flyConn then _G.flyConn:Disconnect() end
+        if _G.flyStep then _G.flyStep:Disconnect() end
+    end)
+end
+
+-- ANIMAÇÃO NATURAL
+if hum and hum:FindFirstChildOfClass("Animator") then
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://913402848" -- Animation deitado (ou pose de nado)
+    local track = hum:FindFirstChildOfClass("Animator"):LoadAnimation(anim)
+    track:Play()
+    track.Looped = true
+    _G.flyAnimTrack = track
+end
+
+-- INPUT (PC)
+_G.flyConn = UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Z then
+        flySpeed = math.max(minSpeed, flySpeed-10)
+        txt.Text = "FLY: "..tostring(flySpeed).." | Z/X = Velocidade"
+    elseif input.KeyCode == Enum.KeyCode.X then
+        flySpeed = math.min(maxSpeed, flySpeed+10)
+        txt.Text = "FLY: "..tostring(flySpeed).." | Z/X = Velocidade"
+    elseif input.KeyCode == Enum.KeyCode.Space then
+        flyUp = true
+    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+        flyDown = true
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        flyUp = false
+    elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+        flyDown = false
+    end
 end)
 
-local speed = 50 -- Velocidade do fly
-local flying = true
-local moveDirection = Vector3.new()
-local jump = false
-local descend = false
+-- FLY LOOP
+_G.flyStep = Run.RenderStepped:Connect(function()
+    if not _G.flying or not char or not hrp or not hum then return end
 
--- PC: registra teclas
-local keys = {W = false, A = false, S = false, D = false, Q = false, E = false}
-
-local function keyDown(input)
-    if input.KeyCode == Enum.KeyCode.W then keys.W = true end
-    if input.KeyCode == Enum.KeyCode.A then keys.A = true end
-    if input.KeyCode == Enum.KeyCode.S then keys.S = true end
-    if input.KeyCode == Enum.KeyCode.D then keys.D = true end
-    if input.KeyCode == Enum.KeyCode.Space then jump = true end
-    if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.LeftShift then descend = true end
-    if input.KeyCode == Enum.KeyCode.E then keys.E = true end
-    if input.KeyCode == Enum.KeyCode.Q then keys.Q = true end
-end
-local function keyUp(input)
-    if input.KeyCode == Enum.KeyCode.W then keys.W = false end
-    if input.KeyCode == Enum.KeyCode.A then keys.A = false end
-    if input.KeyCode == Enum.KeyCode.S then keys.S = false end
-    if input.KeyCode == Enum.KeyCode.D then keys.D = false end
-    if input.KeyCode == Enum.KeyCode.Space then jump = false end
-    if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.LeftShift then descend = false end
-    if input.KeyCode == Enum.KeyCode.E then keys.E = false end
-    if input.KeyCode == Enum.KeyCode.Q then keys.Q = false end
-end
-
-UserInputService.InputBegan:Connect(keyDown)
-UserInputService.InputEnded:Connect(keyUp)
-
--- MOBILE: cria botão para subir/descer
-if UserInputService.TouchEnabled then
-    -- Botão para subir
-    local btn = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    btn.Name = "_FlyTouchGui"
-    getgenv()._FLY_BTN = btn
-
-    local up = Instance.new("TextButton", btn)
-    up.Size = UDim2.new(0,80,0,80)
-    up.Position = UDim2.new(1,-180,1,-220)
-    up.Text = "⬆️"
-    up.BackgroundColor3 = Color3.fromRGB(70,170,70)
-    up.TextSize = 38
-    up.TextColor3 = Color3.fromRGB(255,255,255)
-    up.BackgroundTransparency = 0.2
-
-    local dn = Instance.new("TextButton", btn)
-    dn.Size = UDim2.new(0,80,0,80)
-    dn.Position = UDim2.new(1,-90,1,-130)
-    dn.Text = "⬇️"
-    dn.BackgroundColor3 = Color3.fromRGB(170,70,70)
-    dn.TextSize = 38
-    dn.TextColor3 = Color3.fromRGB(255,255,255)
-    dn.BackgroundTransparency = 0.2
-
-    up.MouseButton1Down:Connect(function() jump = true end)
-    up.MouseButton1Up:Connect(function() jump = false end)
-    dn.MouseButton1Down:Connect(function() descend = true end)
-    dn.MouseButton1Up:Connect(function() descend = false end)
-end
-
--- Loop principal
-getgenv()._FLY_CONN = RunService.RenderStepped:Connect(function()
-    if not getgenv()._FLY_ACTIVE or not Character or not HumanoidRootPart or Humanoid.Health <= 0 then return end
-
-    -- Direção do movimento via câmera (universal)
     local cam = workspace.CurrentCamera
-    local move = Vector3.new()
-    if UserInputService.TouchEnabled then
-        -- Mobile: usa MoveDirection do Humanoid (joystick)
-        move = Humanoid.MoveDirection
+    moveDir = Vector3.new()
+    -- PC
+    if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+    if flyUp then moveDir = moveDir + Vector3.new(0,1,0) end
+    if flyDown then moveDir = moveDir - Vector3.new(0,1,0) end
+
+    -- MOBILE: usa MoveDirection do humanoid
+    if isMobile and hum.MoveDirection.Magnitude > 0 then
+        moveDir = moveDir + (cam.CFrame.Rotation:VectorToWorldSpace(hum.MoveDirection))
+    end
+
+    if moveDir.Magnitude > 0 then
+        hrp.Velocity = moveDir.Unit * flySpeed
     else
-        -- PC: teclas
-        if keys.W then move = move + cam.CFrame.LookVector end
-        if keys.S then move = move - cam.CFrame.LookVector end
-        if keys.A then move = move - cam.CFrame.RightVector end
-        if keys.D then move = move + cam.CFrame.RightVector end
-    end
-    if move.Magnitude > 0 then
-        move = move.Unit
+        hrp.Velocity = Vector3.new(0,0,0)
     end
 
-    -- Subir/descer
-    local vert = 0
-    if jump then vert = vert + 1 end
-    if descend then vert = vert - 1 end
-
-    local velocity = (move * speed) + Vector3.new(0, vert*speed, 0)
-    HumanoidRootPart.Velocity = velocity
-    Humanoid.PlatformStand = true
+    -- Bloqueia gravidade e mantém pose
+    hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+    hum.PlatformStand = true
 end)
 
-print("[MOD MENU] Fly ativado universal! PC: WASD/Q/E para mover. Mobile: Joystick anda, botões ⬆️⬇️ sobem/descem.")
+-- Limpeza ao morrer/desativar
+char.AncestryChanged:Connect(function()
+    if not char:IsDescendantOf(workspace) then
+        _G.flying = false
+        if _G.flyConn then _G.flyConn:Disconnect() end
+        if _G.flyAnimTrack then _G.flyAnimTrack:Stop() end
+        if _G.flyStep then _G.flyStep:Disconnect() end
+        pcall(function() gui:Destroy() end)
+        if hum then hum.PlatformStand = false end
+    end
+end)
