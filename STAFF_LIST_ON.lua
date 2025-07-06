@@ -10,7 +10,7 @@ if _G._StaffLine_Draws then for _,d in pairs(_G._StaffLine_Draws) do pcall(funct
 _G._StaffLine_Draws = {}
 
 local function isStaff(p)
-    return p.Team and (p.Team.Name == "civil" or p.Team.Name == "BIB | STAFF")
+    return p.Team and (p.Team.Name == "CI | CIVIL" or p.Team.Name == "BIB | STAFF")
 end
 
 _G._StaffLine_Con = RunService.RenderStepped:Connect(function()
