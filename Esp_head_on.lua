@@ -1,17 +1,24 @@
--- ESP HEAD - ATIVAR (MESMO CÓDIGO DO MENU ORIGINAL)
+-- ESP HEAD: Só aparece (vermelho) em quem NÃO for STAFF/BIB nem STAFF
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 if not _G.espHeadHigh then _G.espHeadHigh = {} end
 if not _G.espHeadAdded then _G.espHeadAdded = {} end
 
+local function isStaff(plr)
+    return plr.Team and (
+        plr.Team.Name == "STAFF" or plr.Team.Name == "BIB | STAFF" or plr.Team.Name == "STAFF/BIB"
+    )
+end
+
 for _,plr in ipairs(Players:GetPlayers()) do
-    if plr ~= player then
+    if plr ~= player and not isStaff(plr) then
         local function addHeadHighlight()
             if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
                 if _G.espHeadHigh[plr] then _G.espHeadHigh[plr]:Destroy() end
                 local high = Instance.new("Highlight")
-                high.FillColor = plr.Team and plr.Team.TeamColor and plr.Team.TeamColor.Color or Color3.new(1,1,1)
+                high.FillColor = Color3.fromRGB(255,0,0) -- VERMELHO
                 high.OutlineTransparency = 1
                 high.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 high.Parent = plr.Character.Head
@@ -30,12 +37,13 @@ end
 if not _G.espHeadAdded["_playerAdded"] then
     _G.espHeadAdded["_playerAdded"] = Players.PlayerAdded:Connect(function(plr)
         if plr == player then return end
+        if isStaff(plr) then return end
         _G.espHeadAdded[plr] = plr.CharacterAdded:Connect(function()
             task.wait(0.2)
             if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
                 if _G.espHeadHigh[plr] then _G.espHeadHigh[plr]:Destroy() end
                 local high = Instance.new("Highlight")
-                high.FillColor = plr.Team and plr.Team.TeamColor and plr.Team.TeamColor.Color or Color3.new(1,1,1)
+                high.FillColor = Color3.fromRGB(255,0,0) -- VERMELHO
                 high.OutlineTransparency = 1
                 high.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 high.Parent = plr.Character.Head
