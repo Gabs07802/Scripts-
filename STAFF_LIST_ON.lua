@@ -1,4 +1,4 @@
--- STAFF LIST ON: Exibe lista compacta, RGB animado, pode ser movida livremente
+-- STAFF LIST ON: Com movimentação por mouse (PC) e toque (celular/tablet), só pela barra vermelha
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -45,20 +45,20 @@ mainFrame.Position = UDim2.new(0.5, -500/6, 0.15, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 mainFrame.BackgroundTransparency = 0
 mainFrame.Parent = gui
-mainFrame.Active = true -- Importante para drag
+mainFrame.Active = true
 
 local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0,40/3)
 uicorner.Parent = mainFrame
 
--- Title bar
+-- Title bar (barra vermelha)
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 60/3)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(128, 65, 65)
 titleBar.BackgroundTransparency = 0
 titleBar.Parent = mainFrame
-titleBar.Active = true -- Importante para drag
+titleBar.Active = true
 
 local titleUICorner = Instance.new("UICorner")
 titleUICorner.CornerRadius = UDim.new(0,40/3)
@@ -76,7 +76,7 @@ titleLbl.TextXAlignment = Enum.TextXAlignment.Center
 titleLbl.TextYAlignment = Enum.TextYAlignment.Center
 titleLbl.Parent = titleBar
 
--- Staff list
+-- Lista dos staffs
 local listStartY = 70/3
 local lineHeight = 45/3
 local maxLines = 3
@@ -97,22 +97,29 @@ for i = 1, maxLines do
     staffLines[i] = label
 end
 
--- DRAG & DROP PARA O PAINEL (arrasta pelo titleBar)
-local dragging, dragStart, startPos
+-- DRAG & DROP MOUSE + TOUCH SOMENTE PELA BARRA VERMELHA
+local dragging = false
+local dragStart, startPos
+
+local function beginDrag(input)
+    dragging = true
+    dragStart = input.Position
+    startPos = mainFrame.Position
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+        end
+    end)
+end
+
 titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        beginDrag(input)
     end
 end)
+
 _G._StaffList_DragCon = UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         mainFrame.Position = UDim2.new(
             startPos.X.Scale, startPos.X.Offset + delta.X,
