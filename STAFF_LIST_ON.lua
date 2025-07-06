@@ -1,4 +1,5 @@
 -- STAFF LIST ON: Exibe uma lista com STAFF: Nome em RGB [distância em RGB], apenas para times STAFF e BIB | STAFF
+-- Agora, versão 3x menor e proporcional ao seu modelo!
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -31,33 +32,33 @@ local function getStaffPlayers()
     return list
 end
 
--- GUI Setup
+-- GUI Setup reduzido (3x menor)
 local gui = Instance.new("ScreenGui")
 gui.Name = "StaffListGUI"
 gui.Parent = game.CoreGui
 _G._StaffListGui = gui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -250, 0.15, 0)
+mainFrame.Size = UDim2.new(0, 500/3, 0, 220/3) -- 3x menor
+mainFrame.Position = UDim2.new(0.5, -500/6, 0.15, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 mainFrame.BackgroundTransparency = 0
 mainFrame.Parent = gui
 
 local uicorner = Instance.new("UICorner")
-uicorner.CornerRadius = UDim.new(0,40)
+uicorner.CornerRadius = UDim.new(0,40/3)
 uicorner.Parent = mainFrame
 
 -- Title bar
 local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 60)
+titleBar.Size = UDim2.new(1, 0, 0, 60/3)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(128, 65, 65)
 titleBar.BackgroundTransparency = 0
 titleBar.Parent = mainFrame
 
 local titleUICorner = Instance.new("UICorner")
-titleUICorner.CornerRadius = UDim.new(0,40)
+titleUICorner.CornerRadius = UDim.new(0,40/3)
 titleUICorner.Parent = titleBar
 
 local titleLbl = Instance.new("TextLabel")
@@ -66,15 +67,15 @@ titleLbl.Text = "STAFF LIST"
 titleLbl.Size = UDim2.new(1, 0, 1, 0)
 titleLbl.BackgroundTransparency = 1
 titleLbl.Font = Enum.Font.GothamBlack
-titleLbl.TextSize = 54
+titleLbl.TextSize = 54/3
 titleLbl.TextColor3 = Color3.fromRGB(255,255,255)
 titleLbl.TextXAlignment = Enum.TextXAlignment.Center
 titleLbl.TextYAlignment = Enum.TextYAlignment.Center
 titleLbl.Parent = titleBar
 
 -- Staff list
-local listStartY = 70
-local lineHeight = 45
+local listStartY = 70/3
+local lineHeight = 45/3
 local maxLines = 3
 local staffLines = {}
 
@@ -82,10 +83,10 @@ for i = 1, maxLines do
     local label = Instance.new("TextLabel")
     label.Name = "StaffLine" .. i
     label.BackgroundTransparency = 1
-    label.Position = UDim2.new(0, 20, 0, listStartY + (i-1)*lineHeight)
-    label.Size = UDim2.new(1, -40, 0, lineHeight)
+    label.Position = UDim2.new(0, 20/3, 0, listStartY + (i-1)*lineHeight)
+    label.Size = UDim2.new(1, -40/3, 0, lineHeight)
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 28
+    label.TextSize = 28/3
     label.TextColor3 = Color3.fromRGB(255,255,255)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = ""
