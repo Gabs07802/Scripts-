@@ -1,62 +1,45 @@
--- STAFF LINE ON: Desenha linhas RGB para jogadores do time STAFF ou BIB | STAFF
+-- STAFF LINE ON: Linha fina, RGB, só para STAFF/BIB | STAFF entre 1 e 400 metros
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
-_G._StaffLine_Connections = _G._StaffLine_Connections or {}
-_G._StaffLine_Draws = _G._StaffLine_Draws or {}
-
-local function isStaff(player)
-    if not player.Team or not player.Team.Name then return false end
-    local t = player.Team.Name
-    return t == "STAFF" or t == "BIB | STAFF"
-end
-
-local function getStaffPlayers()
-    local list = {}
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and isStaff(plr) and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            table.insert(list, plr)
-        end
-    end
-    return list
-end
-
-local function getRGBColor(timeOffset)
-    local t = tick() + (timeOffset or 0)
-    return Color3.fromHSV((t%5)/5, 1, 1)
-end
-
--- Clean up previous
-for _,c in ipairs(_G._StaffLine_Connections) do pcall(function() c:Disconnect() end) end
-_G._StaffLine_Connections = {}
-for _,d in ipairs(_G._StaffLine_Draws) do pcall(function() d:Remove() end) end
+if _G._StaffLine_Con then _G._StaffLine_Con:Disconnect() end
+if _G._StaffLine_Draws then for _,d in pairs(_G._StaffLine_Draws) do pcall(function() d:Remove() end) end end
 _G._StaffLine_Draws = {}
 
-local function drawLines()
-    -- Remove previous lines
-    for _,d in ipairs(_G._StaffLine_Draws) do pcall(function() d:Remove() end) end
+local function isStaff(p)
+    return p.Team and (p.Team.Name == "CI | CIVIL" or p.Team.Name == "BIB | STAFF")
+end
+
+_G._StaffLine_Con = RunService.RenderStepped:Connect(function()
+    -- Limpa linhas antigas
+    for _,d in pairs(_G._StaffLine_Draws) do pcall(function() d:Remove() end) end
     _G._StaffLine_Draws = {}
 
-    for _,plr in ipairs(getStaffPlayers()) do
-        local char = plr.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local pos = char.HumanoidRootPart.Position
-            local vector, onScreen = Camera:WorldToViewportPoint(pos)
-            if onScreen then
-                local line = Drawing.new("Line")
-                line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y) -- Do fundo da tela
-                line.To = Vector2.new(vector.X, vector.Y)
-                line.Color = getRGBColor(vector.X + vector.Y)
-                line.Thickness = 2
-                line.Transparency = 1
-                table.insert(_G._StaffLine_Draws, line)
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and isStaff(plr) then
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (myHRP.Position - hrp.Position).Magnitude
+                if dist >= 1 and dist <= 400 then
+                    local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                    if onScreen then
+                        local line = Drawing.new("Line")
+                        line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Color = Color3.fromHSV((tick()%5)/5,1,1)
+                        line.Thickness = 1.2
+                        line.Transparency = 1
+                        table.insert(_G._StaffLine_Draws, line)
+                    end
+                end
             end
         end
     end
-end
-
-local con = RunService.RenderStepped:Connect(drawLines)
-table.insert(_G._StaffLine_Connections, con)
+end)
