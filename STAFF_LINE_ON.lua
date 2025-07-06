@@ -27,7 +27,7 @@ _G._StaffLine_Con = RunService.RenderStepped:Connect(function()
             local head = char and char:FindFirstChild("Head")
             if head then
                 local dist = (myHRP.Position - head.Position).Magnitude
-                if dist >= 1 and dist <= 700 then
+                if dist >= 1 and dist <= 400 then
                     local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                     if onScreen then
                         local line = Drawing.new("Line")
