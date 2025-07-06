@@ -1,4 +1,4 @@
--- STAFF LINE ON: Linha fina, RGB, só para STAFF/BIB | STAFF entre 1 e 400 metros
+-- STAFF LINE ON: Linha fina, RGB, só para STAFF/BIB | STAFF entre 1 e 400 metros, agora acompanha a cabeça (Head)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -10,7 +10,7 @@ if _G._StaffLine_Draws then for _,d in pairs(_G._StaffLine_Draws) do pcall(funct
 _G._StaffLine_Draws = {}
 
 local function isStaff(p)
-    return p.Team and (p.Team.Name == "CI | CIVIL" or p.Team.Name == "BIB | STAFF")
+    return p.Team and (p.Team.Name == "STAFF" or p.Team.Name == "BIB | STAFF")
 end
 
 _G._StaffLine_Con = RunService.RenderStepped:Connect(function()
@@ -24,11 +24,11 @@ _G._StaffLine_Con = RunService.RenderStepped:Connect(function()
     for _,plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and isStaff(plr) then
             local char = plr.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local dist = (myHRP.Position - hrp.Position).Magnitude
-                if dist >= 1 and dist <= 400 then
-                    local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local head = char and char:FindFirstChild("Head")
+            if head then
+                local dist = (myHRP.Position - head.Position).Magnitude
+                if dist >= 1 and dist <= 700 then
+                    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                     if onScreen then
                         local line = Drawing.new("Line")
                         line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
