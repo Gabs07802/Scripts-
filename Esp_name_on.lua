@@ -1,4 +1,4 @@
--- ESP NAME - ATIVAR (MESMO CÓDIGO DO MENU ORIGINAL)
+-- ESP NAME - ATIVAR (50% menor)
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
@@ -68,7 +68,7 @@ if not _G.espNameAddedConnections["_playerAdded"] then
     end)
 end
 
--- RenderStepped para ajustar o tamanho do texto conforme distância
+-- RenderStepped para ajustar o tamanho do texto conforme distância (50% menor)
 if not _G.espNameRenderStepped then
     _G.espNameRenderStepped = game:GetService("RunService").RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
@@ -76,9 +76,9 @@ if not _G.espNameRenderStepped then
             if bb and bb.Parent and plr.Character and plr.Character:FindFirstChild("Head") then
                 local head = plr.Character.Head
                 local dist = (cam.CFrame.Position - head.Position).Magnitude
-                -- Parâmetros de escala
+                -- Parâmetros de escala 50% menores
                 local minDist, maxDist = 15, 150
-                local minSize, maxSize = 12, 28
+                local minSize, maxSize = 6, 14
                 local size = math.clamp(maxSize - ((dist - minDist) * ((maxSize-minSize)/(maxDist-minDist))), minSize, maxSize)
                 local txt = bb:FindFirstChild("NameLabel")
                 if txt then
