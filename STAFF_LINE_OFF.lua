@@ -1,10 +1,4 @@
--- STAFF LINE OFF: Remove todas as linhas e desconecta
+-- STAFF LIST OFF: Remove a lista e desconecta atualização
 
-if _G._StaffLine_Connections then
-    for _,c in ipairs(_G._StaffLine_Connections) do pcall(function() c:Disconnect() end) end
-    _G._StaffLine_Connections = nil
-end
-if _G._StaffLine_Draws then
-    for _,d in ipairs(_G._StaffLine_Draws) do pcall(function() d:Remove() end) end
-    _G._StaffLine_Draws = nil
-end
+if _G._StaffList_Con then pcall(function() _G._StaffList_Con:Disconnect() end) _G._StaffList_Con = nil end
+if _G._StaffListGui then pcall(function() _G._StaffListGui:Destroy() end) _G._StaffListGui = nil end
