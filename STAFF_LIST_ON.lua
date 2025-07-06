@@ -1,14 +1,15 @@
--- STAFF LIST ON: Exibe uma lista com STAFF: Nome em RGB [distância em RGB], apenas para times STAFF e BIB | STAFF
--- Agora, versão 3x menor e proporcional ao seu modelo!
+-- STAFF LIST ON: Exibe lista compacta, RGB animado, movível só pela barra vermelha do topo
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Cleanup anterior
 if _G._StaffListGui then pcall(function() _G._StaffListGui:Destroy() end) end
 if _G._StaffList_Con then pcall(function() _G._StaffList_Con:Disconnect() end) end
+if _G._StaffList_DragCon then pcall(function() _G._StaffList_DragCon:Disconnect() end) end
 
 -- Função para RGB animado
 local function getRGBColor(offset)
@@ -39,23 +40,25 @@ gui.Parent = game.CoreGui
 _G._StaffListGui = gui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500/3, 0, 220/3) -- 3x menor
+mainFrame.Size = UDim2.new(0, 500/3, 0, 220/3)
 mainFrame.Position = UDim2.new(0.5, -500/6, 0.15, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 mainFrame.BackgroundTransparency = 0
 mainFrame.Parent = gui
+mainFrame.Active = true -- Para permitir input descendente
 
 local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0,40/3)
 uicorner.Parent = mainFrame
 
--- Title bar
+-- Title bar (barra vermelha)
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 60/3)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(128, 65, 65)
 titleBar.BackgroundTransparency = 0
 titleBar.Parent = mainFrame
+titleBar.Active = true -- Para arrastar
 
 local titleUICorner = Instance.new("UICorner")
 titleUICorner.CornerRadius = UDim.new(0,40/3)
@@ -93,6 +96,30 @@ for i = 1, maxLines do
     label.Parent = mainFrame
     staffLines[i] = label
 end
+
+-- DRAG & DROP SOMENTE PELA BARRA VERMELHA
+local dragging, dragStart, startPos
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+_G._StaffList_DragCon = UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 -- Atualização dinâmica da lista e RGB
 _G._StaffList_Con = RunService.RenderStepped:Connect(function()
