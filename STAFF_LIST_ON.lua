@@ -1,4 +1,4 @@
--- STAFF LIST ON: Exibe lista compacta, RGB animado, movível só pela barra vermelha do topo
+-- STAFF LIST ON: Exibe lista compacta, RGB animado, pode ser movida livremente
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -45,20 +45,20 @@ mainFrame.Position = UDim2.new(0.5, -500/6, 0.15, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 mainFrame.BackgroundTransparency = 0
 mainFrame.Parent = gui
-mainFrame.Active = true -- Para permitir input descendente
+mainFrame.Active = true -- Importante para drag
 
 local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0,40/3)
 uicorner.Parent = mainFrame
 
--- Title bar (barra vermelha)
+-- Title bar
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 60/3)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(128, 65, 65)
 titleBar.BackgroundTransparency = 0
 titleBar.Parent = mainFrame
-titleBar.Active = true -- Para arrastar
+titleBar.Active = true -- Importante para drag
 
 local titleUICorner = Instance.new("UICorner")
 titleUICorner.CornerRadius = UDim.new(0,40/3)
@@ -97,7 +97,7 @@ for i = 1, maxLines do
     staffLines[i] = label
 end
 
--- DRAG & DROP SOMENTE PELA BARRA VERMELHA
+-- DRAG & DROP PARA O PAINEL (arrasta pelo titleBar)
 local dragging, dragStart, startPos
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
