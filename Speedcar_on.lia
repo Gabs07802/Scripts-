@@ -1,0 +1,21 @@
+-- ATIVAR SPEEDCAR: coloca todos os carros com velocidade máxima 350 e dobra aceleração (se houver)
+local carrosFolder = workspace:FindFirstChild("CarrosSpawnados")
+if carrosFolder then
+    for _, carro in ipairs(carrosFolder:GetChildren()) do
+        local vMax = carro:FindFirstChild("VelocidadeMaxima")
+        if vMax and vMax:IsA("NumberValue") then
+            vMax.Value = 350
+        end
+        for _, obj in ipairs(carro:GetChildren()) do
+            if obj:IsA("NumberValue") then
+                local nome = string.lower(obj.Name)
+                if nome:find("acelera") or nome:find("accel") then
+                    obj.Value = obj.Value * 2
+                end
+            end
+        end
+    end
+    print("SpeedCar ATIVADO: Todos os carros agora têm velocidade máxima 350 e aceleração dobrada.")
+else
+    warn("Pasta 'CarrosSpawnados' não encontrada!")
+end
