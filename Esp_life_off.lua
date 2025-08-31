@@ -1,16 +1,18 @@
--- Desativa ESP LIFE Simples
-
-_G.EspLife_Simple_Enabled = false
-local Players = game:GetService("Players")
-if _G.EspLifeSimpleConn then
-    for k,conn in pairs(_G.EspLifeSimpleConn) do
-        pcall(function() if typeof(conn)=="RBXScriptConnection" then conn:Disconnect() end end)
-    end
+if _G.espLifeBarRender then
+    _G.espLifeBarRender:Disconnect()
+    _G.espLifeBarRender = nil
 end
-for _,plr in ipairs(Players:GetPlayers()) do
-    if plr.Character and plr.Character:FindFirstChild("Head") then
-        local bb = plr.Character.Head:FindFirstChild("EspLifeSimple")
-        if bb then pcall(function() bb:Destroy() end) end
+if _G.espLifeBarDrawing then
+    for _,draws in pairs(_G.espLifeBarDrawing) do
+        for _,draw in pairs(draws) do
+            pcall(function() draw:Remove() end)
+        end
     end
+    _G.espLifeBarDrawing = {}
 end
-_G.EspLifeSimpleConn = {}
+if _G.espLifeBarAdded then
+    for _,conn in pairs(_G.espLifeBarAdded) do
+        pcall(function() conn:Disconnect() end)
+    end
+    _G.espLifeBarAdded = {}
+end
