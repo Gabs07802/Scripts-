@@ -1,9 +1,18 @@
--- ESP CORPO - DESATIVAR (MESMO CÓDIGO DO MENU ORIGINAL)
-if _G.espBodyAdded then
-    for plr,conn in pairs(_G.espBodyAdded) do if conn then pcall(function() conn:Disconnect() end) end end
-    _G.espBodyAdded = {}
+if _G.espSkeletonRender then
+    _G.espSkeletonRender:Disconnect()
+    _G.espSkeletonRender = nil
 end
-if _G.espBodyHigh then
-    for plr,high in pairs(_G.espBodyHigh) do if high then pcall(function() high:Destroy() end) end end
-    _G.espBodyHigh = {}
+if _G.espSkeletonDrawing then
+    for _,lines in pairs(_G.espSkeletonDrawing) do
+        for _,line in pairs(lines) do
+            pcall(function() line:Remove() end)
+        end
+    end
+    _G.espSkeletonDrawing = {}
+end
+if _G.espSkeletonAdded then
+    for _,conn in pairs(_G.espSkeletonAdded) do
+        pcall(function() conn:Disconnect() end)
+    end
+    _G.espSkeletonAdded = {}
 end
