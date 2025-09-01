@@ -1,8 +1,7 @@
--- STAFF LIST ON: Com movimentação por mouse (PC) e toque (celular/tablet), só pela barra vermelha
+-- STAFF LIST ON: Interface com título, nome e distância em RGB animado
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -33,7 +32,7 @@ local function getStaffPlayers()
     return list
 end
 
--- GUI Setup reduzido (3x menor)
+-- GUI Setup
 local gui = Instance.new("ScreenGui")
 gui.Name = "StaffListGUI"
 gui.Parent = game.CoreGui
@@ -42,7 +41,7 @@ _G._StaffListGui = gui
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 500/3, 0, 220/3)
 mainFrame.Position = UDim2.new(0.5, -500/6, 0.15, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(32,32,32)
 mainFrame.BackgroundTransparency = 0
 mainFrame.Parent = gui
 mainFrame.Active = true
@@ -51,11 +50,11 @@ local uicorner = Instance.new("UICorner")
 uicorner.CornerRadius = UDim.new(0,40/3)
 uicorner.Parent = mainFrame
 
--- Title bar (barra vermelha)
+-- Title bar (barra escura, agora com rgb no texto)
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 60/3)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
-titleBar.BackgroundColor3 = Color3.fromRGB(128, 65, 65)
+titleBar.BackgroundColor3 = Color3.fromRGB(0,0,0)
 titleBar.BackgroundTransparency = 0
 titleBar.Parent = mainFrame
 titleBar.Active = true
@@ -75,6 +74,7 @@ titleLbl.TextColor3 = Color3.fromRGB(255,255,255)
 titleLbl.TextXAlignment = Enum.TextXAlignment.Center
 titleLbl.TextYAlignment = Enum.TextYAlignment.Center
 titleLbl.Parent = titleBar
+titleLbl.RichText = true -- Ativa richtext
 
 -- Lista dos staffs
 local listStartY = 70/3
@@ -94,10 +94,11 @@ for i = 1, maxLines do
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = ""
     label.Parent = mainFrame
+    label.RichText = true -- Ativa richtext
     staffLines[i] = label
 end
 
--- DRAG & DROP MOUSE + TOUCH SOMENTE PELA BARRA VERMELHA
+-- DRAG & DROP MOUSE + TOUCH SOMENTE PELA BARRA
 local dragging = false
 local dragStart, startPos
 
@@ -130,8 +131,10 @@ end)
 
 -- Atualização dinâmica da lista e RGB
 _G._StaffList_Con = RunService.RenderStepped:Connect(function()
-    -- Atualiza cor do título
-    titleLbl.TextColor3 = getRGBColor(0)
+    -- Atualiza cor RGB do título animado
+    local rgbTitle = getRGBColor(0)
+    titleLbl.Text = ("<font color=\"rgb(%d,%d,%d)\">STAFF LIST</font>")
+        :format(math.floor(rgbTitle.R*255), math.floor(rgbTitle.G*255), math.floor(rgbTitle.B*255))
 
     local staffList = getStaffPlayers()
     for i = 1, maxLines do
@@ -144,12 +147,11 @@ _G._StaffList_Con = RunService.RenderStepped:Connect(function()
             -- RGB para nome e distância
             local rgbName = getRGBColor(i*0.25)
             local rgbDist = getRGBColor(i*0.5)
-            line.Text = ("STAFF: <font color=\"rgb(%d,%d,%d)\">%s</font> [ <font color=\"rgb(%d,%d,%d)\">%s metros</font> ]")
+            line.Text = ("<font color=\"rgb(%d,%d,%d)\">%s</font> [ <font color=\"rgb(%d,%d,%d)\">%s m</font> ]")
                 :format(
                     math.floor(rgbName.R*255), math.floor(rgbName.G*255), math.floor(rgbName.B*255), plr.Name,
                     math.floor(rgbDist.R*255), math.floor(rgbDist.G*255), math.floor(rgbDist.B*255), dist
                 )
-            line.RichText = true
             line.Visible = true
         else
             line.Text = ""
