@@ -1,4 +1,3 @@
--- ESP BOX - ATIVAR (MESMO CÓDIGO DO MENU ORIGINAL)
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
@@ -7,6 +6,7 @@ if not _G.espBoxAdded then _G.espBoxAdded = {} end
 if not _G.espBoxRender then _G.espBoxRender = nil end
 
 local RunService, Camera = game:GetService("RunService"), workspace.CurrentCamera
+
 local function addBox(plr)
     if plr == player then return end
     if _G.espBoxDrawing[plr] then pcall(function() _G.espBoxDrawing[plr]:Remove() end) end
@@ -15,6 +15,7 @@ local function addBox(plr)
     box.Color = plr.Team and plr.Team.TeamColor and plr.Team.TeamColor.Color or Color3.new(1,1,1)
     _G.espBoxDrawing[plr] = box
 end
+
 for _,plr in ipairs(Players:GetPlayers()) do
     if plr ~= player then
         addBox(plr)
@@ -22,33 +23,42 @@ for _,plr in ipairs(Players:GetPlayers()) do
         _G.espBoxAdded[plr] = plr.CharacterAdded:Connect(function() addBox(plr) end)
     end
 end
+
 if not _G.espBoxAdded["_playerAdded"] then
     _G.espBoxAdded["_playerAdded"] = Players.PlayerAdded:Connect(function(plr)
         if plr == player then return end
         _G.espBoxAdded[plr] = plr.CharacterAdded:Connect(function() addBox(plr) end)
     end)
 end
+
 if not _G.espBoxRender then
     _G.espBoxRender = RunService.RenderStepped:Connect(function()
         for plr, box in pairs(_G.espBoxDrawing) do
             local char = plr.Character
             if box and char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Head") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
-                local hrp, head = char.HumanoidRootPart, char.Head
+                local hrp = char.HumanoidRootPart
+                local head = char.Head
                 local size = hrp.Size
                 local cam = Camera
-                -- Calculate box corners
-                local top = (hrp.CFrame * CFrame.new(0, size.Y/2 + (head.Position.Y-hrp.Position.Y), 0)).Position
-                local bottom = (hrp.CFrame * CFrame.new(0, -size.Y/2, 0)).Position
+
+                -- Topo da caixa = topo da cabeça
+                local top = head.Position + Vector3.new(0, head.Size.Y/2, 0)
+                -- Fundo da caixa = base dos pés (base do HumanoidRootPart menos metade do tamanho Y)
+                local bottom = hrp.Position - Vector3.new(0, size.Y/2, 0)
                 local r = size.X/2
-                local front = hrp.CFrame.LookVector * (size.Z/2)
+                local z = size.Z/2
+
+                local front = hrp.CFrame.LookVector * z
                 local right = hrp.CFrame.RightVector * r
 
+                -- Pontos do box: topo-direita, topo-esquerda, fundo-esquerda, fundo-direita
                 local corners = {
-                    cam:WorldToViewportPoint((top + right + front)),
-                    cam:WorldToViewportPoint((top - right + front)),
-                    cam:WorldToViewportPoint((bottom - right - front)),
-                    cam:WorldToViewportPoint((bottom + right - front)),
+                    cam:WorldToViewportPoint((top + right + front)),    -- topo-direita
+                    cam:WorldToViewportPoint((top - right + front)),    -- topo-esquerda
+                    cam:WorldToViewportPoint((bottom - right - front)), -- fundo-esquerda
+                    cam:WorldToViewportPoint((bottom + right - front)), -- fundo-direita
                 }
+
                 if corners[1].Z > 0 and corners[2].Z > 0 and corners[3].Z > 0 and corners[4].Z > 0 then
                     box.Visible = true
                     box.PointA = Vector2.new(corners[1].X, corners[1].Y)
