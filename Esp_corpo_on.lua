@@ -1,16 +1,36 @@
+--[[
+Esse script mistura ESP Skeleton (linhas conectando partes do corpo) + ESP Head Highlight (cabeça fica vermelha, exceto STAFF/BIB).
+
+- Desenha esqueleto para todos jogadores (exceto você).
+- Destaca a cabeça em vermelho (Highlight) para quem NÃO for STAFF/BIB.
+- Otimizado para não duplicar highlights ou linhas.
+]]
+
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
+-- Skeleton config
 if not _G.espSkeletonDrawing then _G.espSkeletonDrawing = {} end
 if not _G.espSkeletonRender then _G.espSkeletonRender = nil end
+if not _G.espSkeletonAdded then _G.espSkeletonAdded = {} end
+
+-- Head highlight config
+if not _G.espHeadHigh then _G.espHeadHigh = {} end
+if not _G.espHeadAdded then _G.espHeadAdded = {} end
 
 local function getTeamColor(plr)
     return (plr.Team and plr.Team.TeamColor and plr.Team.TeamColor.Color) or Color3.new(1,1,1)
 end
 
--- Cria linhas para o esqueleto: 13 linhas para cabeça, ombros, tronco, mãos, pernas, pés
+local function isStaff(plr)
+    return plr.Team and (
+        plr.Team.Name == "STAFF" or plr.Team.Name == "BIB | STAFF" or plr.Team.Name == "STAFF/BIB"
+    )
+end
+
+-- Skeleton line connections
 local SKELETON_LINEMAP = {
     {"Head", "UpperTorso"},     -- cabeça ao torso superior
     {"UpperTorso", "LeftUpperArm"},  -- torso ao ombro esquerdo
@@ -46,26 +66,55 @@ local function addSkeleton(plr)
     for i=1,#SKELETON_LINEMAP do
         local line = Drawing.new("Line")
         line.Visible = true
-        line.Thickness = 2
+        line.Thickness = 1
         table.insert(_G.espSkeletonDrawing[plr], line)
+    end
+end
+
+local function addHeadHighlight(plr)
+    if plr == LocalPlayer or isStaff(plr) then return end
+    if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+        if _G.espHeadHigh[plr] then _G.espHeadHigh[plr]:Destroy() end
+        local high = Instance.new("Highlight")
+        high.FillColor = Color3.fromRGB(255,0,0) -- VERMELHO
+        high.OutlineTransparency = 1
+        high.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        high.Parent = plr.Character.Head
+        high.Adornee = plr.Character.Head
+        _G.espHeadHigh[plr] = high
     end
 end
 
 for _,plr in ipairs(Players:GetPlayers()) do
     if plr ~= LocalPlayer then
         addSkeleton(plr)
-        if _G.espSkeletonDrawing[plr] then
-            if _G.espSkeletonAdded and _G.espSkeletonAdded[plr] then _G.espSkeletonAdded[plr]:Disconnect() end
-            _G.espSkeletonAdded = _G.espSkeletonAdded or {}
-            _G.espSkeletonAdded[plr] = plr.CharacterAdded:Connect(function() addSkeleton(plr) end)
-        end
+        if _G.espSkeletonAdded[plr] then _G.espSkeletonAdded[plr]:Disconnect() end
+        _G.espSkeletonAdded[plr] = plr.CharacterAdded:Connect(function() addSkeleton(plr) end)
+        
+        -- Head highlight
+        addHeadHighlight(plr)
+        if _G.espHeadAdded[plr] then _G.espHeadAdded[plr]:Disconnect() end
+        _G.espHeadAdded[plr] = plr.CharacterAdded:Connect(function()
+            task.wait(0.2)
+            addHeadHighlight(plr)
+        end)
     end
 end
-if not _G.espSkeletonAdded or not _G.espSkeletonAdded["_playerAdded"] then
-    _G.espSkeletonAdded = _G.espSkeletonAdded or {}
+
+if not _G.espSkeletonAdded["_playerAdded"] then
     _G.espSkeletonAdded["_playerAdded"] = Players.PlayerAdded:Connect(function(plr)
         if plr == LocalPlayer then return end
         _G.espSkeletonAdded[plr] = plr.CharacterAdded:Connect(function() addSkeleton(plr) end)
+    end)
+end
+
+if not _G.espHeadAdded["_playerAdded"] then
+    _G.espHeadAdded["_playerAdded"] = Players.PlayerAdded:Connect(function(plr)
+        if plr == LocalPlayer or isStaff(plr) then return end
+        _G.espHeadAdded[plr] = plr.CharacterAdded:Connect(function()
+            task.wait(0.2)
+            addHeadHighlight(plr)
+        end)
     end)
 end
 
