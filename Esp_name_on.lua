@@ -15,8 +15,8 @@ local function addEsp(plr)
     local bb = Instance.new("BillboardGui")
     bb.Name = "ESPName"
     bb.Adornee = plr.Character.Head
-    bb.Size = UDim2.new(0,100,0,30)
-    bb.StudsOffset = Vector3.new(0,2,0)
+    bb.Size = UDim2.new(0,50,0,15)
+    bb.StudsOffset = Vector3.new(0,1,0)
     bb.AlwaysOnTop = true
     bb.Parent = plr.Character.Head
 
